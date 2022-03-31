@@ -7,14 +7,17 @@ from openpyxl import load_workbook
 
 # %%
 # change quotes to fit the appropriate constellation and energystar files
-# energystar_excel_file = "Empty_AAPS_Template.xlsx"
 energystar_excel_file = "Add_Bills_to_Meters_City_of_A2_Template.xlsx"
-# constellation_data_file = "AAPS_CONST.xlsx"
 constellation_data_file = "City of Ann Arbor (1).xlsx"
 
 # %%
-# this function creates an instance of an excel workbook where we can use openpyxl to edit the excel sheet directly
 def create_es_excel_wb(file_name):
+    '''
+    Inputs:
+    file_name: name of energystar input file
+    Returns:
+    Excel workbook and excel sheet variables created with the openpyxl library
+    '''
     es_workbook = load_workbook(filename=file_name)
     sheet = es_workbook["Add Bills-Non Electric"]
     return es_workbook, sheet
@@ -22,28 +25,29 @@ def create_es_excel_wb(file_name):
 output_workbook, es_sheet = create_es_excel_wb(energystar_excel_file)
 
 # %%
-# this funtion deletes rows from the excel sheet that do not start with the standardized naming convention of:
-# "Constellation__[CustomerId]__[MeterNumber]__[Meter Description]", with the __[Meter Description] part being optional
 def delete_idxs(populated_sheet):
+    '''
+    Inputs:
+    Energystar template excel sheet instance
+    Returns:
+    Energystar template excel sheet instance filtered to only include rows with our standardized naming convention.
+    The convention is "Constellation__[CustomerId]__[MeterNumber]__[Meter Description]", the "__[Meter Description]" part is optional
+    '''
+
     delete_idxs = []
-    # this is a list containing all of the indexes of rows that don't start with "Constellation__RG-"
-    # we will delete all the rows with this index later
+    # list containing all indexes of rows that don't start with our standardized naming convention
     d_idx = 1
     for row in populated_sheet.iter_rows():
-        # iterate through all rows of the populated excel sheet
-        meter_name = str(row[4].value)
-        # extract the value from the "Meter Name (Pre-filled)" column
+        meter_name = str(row[4].value) # extracts "Meter Name (Pre-filled)" value
         if not meter_name.startswith("Constellation__RG-"):
             # if the meter name does not start with "Constellation__RG-" (for example 009300523), then we add this index to the list
             delete_idxs.append(d_idx)
         d_idx += 1
-    delete_idxs.reverse()
-    # now we reverse the list so we are deleting bottom-up
+    delete_idxs.reverse() # reverse the list so we are deleting bottom-up
     delete_idxs = delete_idxs[:-1]
-    # exclude the row with column headers ("Meter ID (Pre-filled)", "Meter Consumption ID (Pre-filled)", "Portfolio Manager ID, (Pre-filled)", etc.)
-    # display(delete_idxs)
+    # the excel file doesn't have headers, so we skip the first row
     for idx in delete_idxs:
-        # for each index, in this list, we delete the row with that index
+        # delete rows with the indexes of rows that don't match naming conventions
         populated_sheet.delete_rows(idx, amount=1)
 
     return populated_sheet
@@ -52,33 +56,34 @@ def delete_idxs(populated_sheet):
 es_sheet = delete_idxs(es_sheet)
 
 # %%
-# this just confirms that the excel file looks correct before populating it with constellation data
+# this confirms that the excel file looks correct before populating it with constellation data
 output_workbook.save(filename="test_file.xlsx")
 
 # %%
-# this converts the excel sheet into a dataframe, which we will later use to get the meter names
+# converts excel sheet into a dataframe, which we will later use to get the meter names
 data = es_sheet.values
 columns = next(data)[0:]
 es_deleted_df = pd.DataFrame(data, columns=columns)
 
 # %%
-# this funtion performs data cleaning and manipulating tasks for the energystar file
-# the goal of this is to have a copy of the energystar data as a dataframe and (more importantly) a list of all of the unique meter names
-# from the energystar dataframe sheet. We will use this list of unique names later on
 def read_energystar_data(es_df):
+    '''
+    Inputs:
+    Energystar excel template converted into a dataframe
+    Returns:
+    Enegystar upload file as a dataframe, list of unique Meter names in the energystar upload template
+    '''
 
     es_df.columns = es_df.columns.str.replace('\n', ' ')
-    # this gets the first part of the meter name before any commas (sometimes there would be a comma and unnessesary info after this)
+    # gets the first part of the meter name before any commas (sometimes there would be a comma and unnessesary info after this)
     es_df["Meter Name_temp"] = es_df["Meter Name (Pre-filled)"].str.split(",").str[0]
 
-    # then we filter this so the name matches our naming convention
     # this version of the regex make it so you can have any number of digits after the "RG-" in the customerID from constellation
     es_df["Meter Name_temp2"] = es_df["Meter Name_temp"][es_df["Meter Name_temp"].str.contains("Constellation__RG-\d+__\d{10}(?:.+)?") == True]
 
     # if this regex version fails, then we can run this instead:
     # es_df["Meter Name_temp2"] = es_df["Meter Name_temp"][es_df["Meter Name_temp"].str.contains("Constellation__RG-\d+__\d{10}") == True]
     
-    # then we consolidate to get a unique list of all the meter names
     es_data_meter_names = es_df["Meter Name_temp2"].unique()
     return es_df, es_data_meter_names
 
@@ -86,10 +91,14 @@ def read_energystar_data(es_df):
 energystar_data, energystar_data_meter_names = read_energystar_data(es_deleted_df)
 
 # %%
-# this funtion performs data cleaning and manipulating tasks for the constellation file
 def constellation_file_cleanup(file_name):
+    '''
+    Inputs:
+    Constellation data file name
+    Returns:
+    Constellation data as a dataframe, list of dataframes with each dataframe being all meter data from a particular meter
+    '''
     const_excel = pd.read_excel(file_name)
-    # use where function to say if reading is actual of estimated
     const_excel['Actual Or Estimated'] = np.where(const_excel['EndReadType'] == "Actual", 'No', 'Yes')
 
     # this function converts the constellation MeterNumber column into the Constellation__[CustomerId]__[MeterNumber] format
@@ -103,9 +112,7 @@ def constellation_file_cleanup(file_name):
     # this is a list of dfs, each df holds constellation data for a unique meter in constellation
     unique_meter_const = []
     for unique_meter_name in const_excel['MeterNumber'].unique():
-        # display(unique_meter_name)
         temp_df = const_excel[const_excel['MeterNumber'] == unique_meter_name]
-        # display(temp_df)  
         unique_meter_const.append(temp_df)
 
     return const_excel, unique_meter_const
@@ -114,11 +121,20 @@ def constellation_file_cleanup(file_name):
 constellation_excel, unique_meter_data_from_const = constellation_file_cleanup(constellation_data_file)
 
 # %% [markdown]
-# This opens the excel file that we can edit directly:
 
 # %%
 # this funtion populates the energystar excel spreadsheet with the data from constellation
 def populate_spreadsheet(const_dfs, es_meter_names, energystar_pop_sheet):
+    '''
+    Inputs:
+    List of unique dataframes for constellation meters, the list of meters from the energystar template, the energystar excel sheet
+    that we use for populating data
+    What this does:
+    Iterates through the list of constellation dataframes. Then iterates through each row in this dataframe and if constellation data
+    and if the constellation meter name matches with the energystar meter name, then populate the energystar excel sheet with data from constellation
+    Returns:
+    Set of all unique meters and the energystar excel sheet populated with data from constellation meters
+    '''
     meters_set = set()
     # this set will have all the unique meter names in the spreadsheet
     for df in const_dfs:
@@ -151,12 +167,10 @@ def populate_spreadsheet(const_dfs, es_meter_names, energystar_pop_sheet):
             insert_index = 1
             for row in energystar_pop_sheet.iter_rows():
                 # display(row[4].value)
-                # meter_name = str(row[4].value)
                 meter_name = row[4].value
                 # for each row in the energystar excel sheet, we first check to see if the energystar "Meter Name (Pre-filled)" column matches the constellation meter id
                 if meter_name == row_data['Const_Meter_ID']:
                     # if we the energystar meter name matches the constllation meter name, then we found the right now in the energystar excel sheet and can now inserting the constellation data into this row
-                    # display([cell.value for cell in row])
                     break
                 else:
                     # if the name doesn't match, then we increase the insert index number because it means we need to look at the next row in the energystar table (the meter names didn't match, so we look at the next row in constellation)
@@ -203,4 +217,6 @@ output_workbook.save(filename="Output_file.xlsx")
 # with open('meter_set.txt', 'w') as f:
 #     f.write(str(meters_set))
 
-
+# '''
+# inputs, type of inputs, what does it return, what does it do
+# '''
