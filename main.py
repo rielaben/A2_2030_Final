@@ -1,5 +1,4 @@
 # %%
-# going to need to pip install pandas, numpy, and openpyxl
 import pandas as pd
 import numpy as np
 from openpyxl.utils.dataframe import dataframe_to_rows
@@ -7,8 +6,8 @@ from openpyxl import load_workbook
 
 # %%
 # change quotes to fit the appropriate constellation and energystar files
-energystar_excel_file = "Add_Bills_to_Meters_City_of_A2_Template.xlsx"
-constellation_data_file = "City of Ann Arbor (1).xlsx"
+energystar_excel_file = "ESPM_Excel_input\AAPS_Real_Buildings_Template.xlsx"
+constellation_data_file = "Constellation_Excel_input\Ann Arbor Public Schools 3.31.22.xlsx"
 
 # %%
 def create_es_excel_wb(file_name):
@@ -57,7 +56,7 @@ es_sheet = delete_idxs(es_sheet)
 
 # %%
 # this confirms that the excel file looks correct before populating it with constellation data
-output_workbook.save(filename="test_file.xlsx")
+output_workbook.save(filename="checkpoint.xlsx")
 
 # %%
 # converts excel sheet into a dataframe, which we will later use to get the meter names
@@ -80,9 +79,6 @@ def read_energystar_data(es_df):
 
     # this version of the regex make it so you can have any number of digits after the "RG-" in the customerID from constellation
     es_df["Meter Name_temp2"] = es_df["Meter Name_temp"][es_df["Meter Name_temp"].str.contains("Constellation__RG-\d+__\d{10}(?:.+)?") == True]
-
-    # if this regex version fails, then we can run this instead:
-    # es_df["Meter Name_temp2"] = es_df["Meter Name_temp"][es_df["Meter Name_temp"].str.contains("Constellation__RG-\d+__\d{10}") == True]
     
     es_data_meter_names = es_df["Meter Name_temp2"].unique()
     return es_df, es_data_meter_names
@@ -208,7 +204,7 @@ def populate_spreadsheet(const_dfs, es_meter_names, energystar_pop_sheet):
 meters_set, es_sheet = populate_spreadsheet(unique_meter_data_from_const, energystar_data_meter_names, es_sheet)
 
 # %%
-output_workbook.save(filename="Output_file.xlsx")
+output_workbook.save(filename="output.xlsx")
 
 # %%
 # uncomment below if you want to write all of the meter names as a set and export the file:
@@ -216,7 +212,3 @@ output_workbook.save(filename="Output_file.xlsx")
 # import json
 # with open('meter_set.txt', 'w') as f:
 #     f.write(str(meters_set))
-
-# '''
-# inputs, type of inputs, what does it return, what does it do
-# '''
