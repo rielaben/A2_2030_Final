@@ -7,7 +7,7 @@ from openpyxl import load_workbook
 # %%
 # change quotes to fit the appropriate constellation and energystar files
 energystar_excel_file = "ESPM_Excel_input\AAPS_Real_Buildings_Template.xlsx"
-constellation_data_file = "Constellation_Excel_input\Ann Arbor Public Schools 3.31.22.xlsx"
+constellation_data_file = "Constellation_Excel_input\APPS_CONST_3.31.2022.xlsx"
 
 # %%
 def create_es_excel_wb(file_name):
