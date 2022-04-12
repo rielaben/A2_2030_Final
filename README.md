@@ -16,8 +16,10 @@ Instructions:
 4. Run the main.py file
 5. The data from the Constellation file will be populated into the Energystar multimeter upload template in the "Output_file.xlsx" file
 
+
+
 Validating:
-The validation.py file will output any warnings or errors found in your completed "Output_file.xlsx" that may be of concern and should be reviewed before uploading to Energy Star.
+- The validation.py file will output any warnings or errors found in your completed "Output_file.xlsx" that may be of concern and should be reviewed before uploading to Energy Star.
 
 Packages needed:
 - pandas
