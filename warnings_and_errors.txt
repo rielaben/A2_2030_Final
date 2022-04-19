@@ -1,6 +1,0 @@
-WARNING: There are **10** more unique meters in Constellation than there are in the ESPM download template.
-This mismatch could be due to unfinished meter mapping between Constellation meters and Energy Star
-and/or there are any non-gas meters in the data, and/or there are outdated meters.
-It is expected that there will be some difference, but here are the meters that are in constellation
-that are not in ESPM for your own investigation if necessary:
-{2421850209, 2428262178, 2480793640, 2159500777, 2477225930, 2419500940, 4031211372, 2421931664, 2421879032, 2849710266}
